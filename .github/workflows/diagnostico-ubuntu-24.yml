@@ -11,7 +11,7 @@ jobs:
     runs-on: ubuntu-24.04
     timeout-minutes: 12
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - name: Identificar el sistema y AppArmor
         run: |
           cat /etc/os-release
@@ -45,7 +45,7 @@ jobs:
         shell: bash
         run: |
           original=$(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns)
-          trap 'sudo sysctl -q -w kernel.apparmor_restrict_unprivileged_userns="$original"' EXIT
+          trap 'sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns="$original"' EXIT
           sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
           cd ejemplos/cap07
           set +e
