@@ -11,7 +11,9 @@ Git para que una copia impresa apunte a una versión fija. Todavía no hay una e
 
 - Leé el capítulo y ejecutá los comandos en una máquina de laboratorio. Algunos ejemplos crean
   namespaces, montajes, interfaces o reglas de firewall y requieren Linux y herramientas del
-  sistema. Los del capítulo 7 trabajan en namespaces de red descartables.
+  sistema. En Ubuntu 24.04 con AppArmor, los tres scripts del capítulo 7 fallaron al crear un
+  namespace de usuario; [la corrida en una VM y su comparación](https://github.com/ValentinTorassa/VT-Book-Examples/actions/runs/39048287569)
+  muestran el motivo. Usá una VM descartable para esa práctica.
 - `ejemplos/cap08/compose.yaml` muestra configuraciones deliberadamente peligrosas para
   analizarlas; no es una aplicación para desplegar.
 - Las políticas y el registro de AWS del capítulo 9 usan nombres, direcciones y cuentas
