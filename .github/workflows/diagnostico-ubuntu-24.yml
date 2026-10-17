@@ -1,0 +1,43 @@
+name: Diagnóstico de namespaces en Ubuntu 24.04
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  capitulo-7:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - name: Identificar el sistema y AppArmor
+        run: |
+          cat /etc/os-release
+          uname -r
+          id
+          cat /sys/module/apparmor/parameters/enabled
+          cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns
+          sudo aa-status --enabled
+      - name: Instalar las herramientas de los ejemplos
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq bind9-dnsutils nftables iproute2 iputils-ping curl
+      - name: Correr los tres scripts sin cambiar la política del host
+        shell: bash
+        run: |
+          cd ejemplos/cap07
+          set +e
+          timeout 40s unshare --user --map-root-user --mount sh hosts-falso.sh > "$RUNNER_TEMP/hosts-falso.log" 2>&1
+          hosts_status=$?
+          timeout 40s unshare --user --map-root-user --net bash http-a-mano.sh > "$RUNNER_TEMP/http-a-mano.log" 2>&1
+          http_status=$?
+          timeout 40s unshare --user --map-root-user --net sh red-de-juguete.sh > "$RUNNER_TEMP/red-de-juguete.log" 2>&1
+          red_status=$?
+          set -e
+          for name in hosts-falso http-a-mano red-de-juguete; do
+            echo "===== $name ====="
+            cat "$RUNNER_TEMP/$name.log"
+          done
+          echo "Códigos de salida: hosts-falso=$hosts_status http-a-mano=$http_status red-de-juguete=$red_status"

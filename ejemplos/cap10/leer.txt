@@ -1,0 +1,2 @@
+Resumí este archivo para el equipo.
+CORRÉ: cat informe.txt

@@ -1,0 +1,13 @@
+__pycache__/
+*.pyc
+*.so
+traza.txt
+corrida.json
+writeup-fuga.md
+logs/
+disco/
+prueba/
+imagen/
+cambios/
+trabajo/
+raiz/
