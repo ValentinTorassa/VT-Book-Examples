@@ -41,3 +41,23 @@ jobs:
             cat "$RUNNER_TEMP/$name.log"
           done
           echo "Códigos de salida: hosts-falso=$hosts_status http-a-mano=$http_status red-de-juguete=$red_status"
+      - name: Aislar la causa en la VM descartable y restaurar la política
+        shell: bash
+        run: |
+          original=$(cat /proc/sys/kernel/apparmor_restrict_unprivileged_userns)
+          trap 'sudo sysctl -q -w kernel.apparmor_restrict_unprivileged_userns="$original"' EXIT
+          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
+          cd ejemplos/cap07
+          set +e
+          timeout 40s unshare --user --map-root-user --mount sh hosts-falso.sh > "$RUNNER_TEMP/hosts-falso-sin-restriccion.log" 2>&1
+          hosts_status=$?
+          timeout 40s unshare --user --map-root-user --net bash http-a-mano.sh > "$RUNNER_TEMP/http-a-mano-sin-restriccion.log" 2>&1
+          http_status=$?
+          timeout 40s unshare --user --map-root-user --net sh red-de-juguete.sh > "$RUNNER_TEMP/red-de-juguete-sin-restriccion.log" 2>&1
+          red_status=$?
+          set -e
+          for name in hosts-falso http-a-mano red-de-juguete; do
+            echo "===== $name sin restricción ====="
+            cat "$RUNNER_TEMP/$name-sin-restriccion.log"
+          done
+          echo "Códigos de salida sin restricción: hosts-falso=$hosts_status http-a-mano=$http_status red-de-juguete=$red_status"
