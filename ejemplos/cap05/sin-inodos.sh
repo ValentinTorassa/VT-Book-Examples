@@ -7,6 +7,7 @@ while touch "disco/archivo-$n" 2>/dev/null; do
 done
 echo "archivos creados: $n"
 touch disco/uno-mas
-head -c 5M /dev/zero > disco/archivo-0 && echo "5 MiB en un archivo que ya existía: OK"
+head -c 5M /dev/zero > disco/archivo-0 &&
+  echo "5 MiB en un archivo que ya existía: OK"
 df -h disco
 df -i disco

@@ -1,7 +1,5 @@
 #!/bin/sh
-# linterna.sh: qué archivos le pide un comando al kernel.
+# linterna.sh: qué rutas buscó un comando y no encontró.
 # Uso: sh linterna.sh COMANDO [ARGUMENTOS...]
-strace -f -qq -e trace=%file -e signal=none -o traza.txt "$@" >/dev/null
-echo "Pedidos sobre archivos: $(grep -vc 'resumed>' traza.txt)"
-echo "Rutas que no existían, en orden:"
-grep 'ENOENT' traza.txt | cut -d'"' -f2 | awk '!visto[$0]++'
+strace -f -e trace=%file -o traza.txt "$@"
+grep ENOENT traza.txt | cut -d'"' -f2

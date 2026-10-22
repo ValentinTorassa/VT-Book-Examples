@@ -1,5 +1,8 @@
 #!/bin/sh
 # Se corre con: unshare --user --map-root-user --net sh red-de-juguete.sh
+PATH="$PATH:/usr/sbin"  # en Debian, nft está en /usr/sbin
+# Solo corre en un namespace de red nuevo, donde la única interfaz es lo.
+[ "$(ip -o link | wc -l)" -eq 1 ] || { echo "Correlo con unshare --net" >&2; exit 1; }
 ip link set lo up
 ip link add br0 type bridge
 ip addr add 10.88.0.1/24 dev br0

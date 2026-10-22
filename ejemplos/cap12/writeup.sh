@@ -11,7 +11,8 @@ echo
 echo "## Entorno"
 echo "- $(. /etc/os-release && echo "$PRETTY_NAME"), kernel $(uname -r)"
 echo "- $(systemctl --version | head -n 1)"
-echo "- fuga.sh, sha256 $(sha256sum fuga.sh | cut -c 1-16), corrido el $(date +%F)"
+echo "- fuga.sh, sha256 $(sha256sum fuga.sh | cut -c 1-16)," \
+  "corrido el $(date +%F)"
 echo
 echo "## Prueba"
 echo "    $prueba"
