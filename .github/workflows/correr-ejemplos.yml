@@ -534,10 +534,22 @@ jobs:
 
           donde "Cap. 6, Probalo 2 (<3> al principio del error)"
           sed 's|echo "app: no puedo leer|echo "<3>app: no puedo leer|' /tmp/app.sh > /tmp/app-err.sh
+          desde=$(date '+%Y-%m-%d %H:%M:%S')
           corre apperr 20 systemd-run --user --unit=apperr sh /tmp/app-err.sh
-          sleep 2
+          for _ in $(seq 10); do
+            journalctl --user -u apperr -p err --no-pager | grep -q 'no puedo leer' && break
+            sleep 1
+          done
           corre apperr-err 10 journalctl --user -u apperr -p err --no-pager
-          dice "app: no puedo leer /tmp/app.conf"
+          if grep -q 'no puedo leer' "$_log"; then
+            dice "app: no puedo leer /tmp/app.conf"
+          else
+            # Un proceso que dura milisegundos puede terminar antes de que journald averigüe
+            # a qué unit pertenece; la línea queda en el journal sin _SYSTEMD_USER_UNIT.
+            corre apperr-sin-unit 10 journalctl --user -p err --since "$desde" --no-pager
+            dice "app: no puedo leer /tmp/app.conf"
+            aviso "journald guardó la línea sin la unit, y journalctl -u apperr no la muestra"
+          fi
           no_dice "<3>"
           fin
       - name: Listados 6-3 y 6-10 (sin-paquete.sh), Probalo 3
