@@ -59,26 +59,31 @@ jobs:
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 1, Listado 1-2"
           # La advertencia del Listado 1-2: alguna corrida puede cortarse con Terminated, antes
-          # de leer el cgroup. Se repite hasta cinco veces y se anota cuántas se cortaron.
-          cortadas=0
-          for _ in 1 2 3 4 5; do
+          # de leer el cgroup (el capítulo 12 explica por qué). Se corre diez veces y se cuentan
+          # las completas; el contenido se compara con una completa.
+          completas=0
+          for _ in 1 2 3 4 5 6 7 8 9 10; do
             corre fuga-50m 60 systemd-run --user --scope -q -p MemoryMax=50M \
               -p MemorySwapMax=0 sh fuga.sh
-            if grep -q '^oom_group_kill' "$_log"; then break; fi
-            cortadas=$((cortadas + 1))
+            if grep -q '^oom_group_kill' "$_log"; then
+              completas=$((completas + 1))
+              cp "$_log" "$RUNNER_TEMP/fuga-completa.log"
+            fi
           done
-          linea "Killed"
-          linea "python terminó con: 137"
-          if [ "$cortadas" -lt 5 ]; then
-            nota "corridas cortadas antes de una completa: $cortadas"
+          if [ "$completas" -ge 5 ]; then
+            nota "$completas de diez corridas completas; las otras terminaron con Terminated"
           else
-            aviso "las cinco corridas se cortaron con Terminated (código 143) antes de leer memory.max; el capítulo dice que en Ubuntu 24.04 el resultado es el mismo"
+            aviso "solo $completas de diez corridas completas: las demás terminaron con Terminated (143) antes de leer memory.max; el libro dice que alguna puede cortarse"
+          fi
+          if [ "$completas" -eq 0 ]; then
             # La solución del capítulo 12: OOMPolicy=continue.
             corre fuga-50m-continue 60 systemd-run --user --scope -q -p MemoryMax=50M \
               -p MemorySwapMax=0 -p OOMPolicy=continue sh fuga.sh
-            linea "Killed"
-            linea "python terminó con: 137"
+          else
+            usa_log "$RUNNER_TEMP/fuga-completa.log"
           fi
+          linea "Killed"
+          linea "python terminó con: 137"
           linea "52428800"
           linea "oom 1"
           linea "oom_kill 1"
@@ -514,7 +519,13 @@ jobs:
           printf '#!/bin/sh\necho hola\n' > "$d/sinpermiso.sh"
           chmod 644 "$d/sinpermiso.sh"
           corre sinpermiso 20 systemd-run --user --unit=sinpermiso "$d/sinpermiso.sh"
-          codigo 0
+          if grep -q 'Failed to find executable' "$_log"; then
+            # systemd 255 (Ubuntu 24.04) revisa el permiso antes de crear la unit; el 257 de
+            # Debian 13, no. El trabajo de Debian 13 comprueba el ejercicio como está escrito.
+            aviso "systemd $(systemctl --version | awk 'NR == 1 { print $2 }') no crea la unit: $(head -n 1 "$_log") (código $rc)"
+          else
+            codigo 0
+          fi
           corre sinpermiso-exec 20 systemd-run --user --unit=sinpermiso2 -p Type=exec \
             "$d/sinpermiso.sh"
           if [ "$rc" -ne 0 ]; then bien "con Type=exec, systemd-run termina con $rc"
@@ -549,9 +560,17 @@ jobs:
           donde "Cap. 6, Listado 6-10 (los timers de la VM)"
           corre sin-paquete 20 sh sin-paquete.sh
           nota "$(wc -l < "$_log") timers; SIN PAQUETE: $(grep -c '^SIN PAQUETE' "$_log" || true)"
+          # En Ubuntu 24.04, /lib es un enlace a usr/lib y algunos paquetes todavía declaran sus
+          # archivos en /lib. readlink -f da la ruta en /usr/lib, que dpkg no conoce.
           grep '^SIN PAQUETE' "$_log" | while read -r l; do
             t=${l#SIN PAQUETE  }
-            nota "$t -> $(readlink -f "/etc/systemd/system/timers.target.wants/$t")"
+            real=$(readlink -f "/etc/systemd/system/timers.target.wants/$t")
+            alias=${real#/usr}
+            if [ "$alias" != "$real" ] && dueno=$(dpkg -S "$alias" 2> /dev/null); then
+              aviso "$t: SIN PAQUETE, pero dpkg lo tiene como $dueno (ruta con /lib)"
+            else
+              nota "$t -> $real"
+            fi
           done || true
 
           donde "Cap. 6, Probalo 3 (multi-user.target.wants)"
@@ -563,8 +582,14 @@ jobs:
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 6, Listado 6-8"
-          espera=$((PULSO_INICIO + 70 - $(date +%s)))
-          if [ "$espera" -gt 0 ]; then sleep "$espera"; fi
+          # El timer se dispara entre 60 s y 120 s después (AccuracySec=1min por defecto) y
+          # systemd lo descarta cuando termina el servicio.
+          while [ $(($(date +%s) - PULSO_INICIO)) -lt 180 ]; do
+            if ! systemctl --user status pulso.timer > /dev/null 2>&1 \
+              && journalctl --user -u pulso.service --no-pager | grep -q 'pulso de'; then break; fi
+            sleep 2
+          done
+          nota "el timer se fue $(($(date +%s) - PULSO_INICIO)) s después de crearlo"
           corre pulso-status 10 systemctl --user status pulso.timer
           dice "Unit pulso.timer could not be found."
           corre pulso-archivos 10 bash -c 'ls "/run/user/$(id -u)/systemd/transient/" | grep -c pulso'
@@ -847,7 +872,7 @@ jobs:
             -e 's|^  rm raiz/clave.txt$|&\n  rm raiz/token.txt|' \
             "$GITHUB_WORKSPACE/ejemplos/cap08/capas.sh" > capas.sh
           corre capas-token 30 sh capas.sh
-          dice_re '^c--------- 2 .* 0, 0 .* cambios/token\.txt$'
+          dice_re '^c--------- [0-9]+ .* 0, 0 .* cambios/token\.txt$'
           dice_re '^-rw-.* imagen/token\.txt$'
           unshare -r rm -rf imagen cambios trabajo raiz
           fin
@@ -858,13 +883,21 @@ jobs:
           donde "Cap. 8, docker run -m 64m"
           corre docker-max 120 docker run --rm -m 64m busybox cat /sys/fs/cgroup/memory.max
           linea_o_avisa "67108864"
-          corre docker-oom 120 docker run --name oom -m 64m python:3.13-alpine \
-            python3 -c "b = bytearray(128 * 1024 * 1024)"
-          if [ "$rc" -eq 137 ]; then bien "el contenedor que pide 128 MiB muere con 137"
-          else aviso "el contenedor que pide 128 MiB terminó con $rc; el libro dice 137"; fi
-          corre docker-inspect 20 docker inspect -f 'OOMKilled: {{.State.OOMKilled}}' oom
-          linea_o_avisa "OOMKilled: true"
-          docker rm -f oom > /dev/null
+          # El comando de la verificación del libro (15/10), con --memory-swap 64m: sin swap.
+          corre docker-oom 120 docker run --name gloton -m 64m --memory-swap 64m debian:trixie-slim \
+            sh -c 'x=$(head -c 128M /dev/zero | tr "\0" a)'
+          codigo 137
+          corre docker-inspect 20 docker inspect -f 'OOMKilled: {{.State.OOMKilled}}' gloton
+          linea "OOMKilled: true"
+          docker rm -f gloton > /dev/null
+
+          donde "Cap. 8, docker run -m 64m sin --memory-swap, como lo cuenta el texto"
+          corre docker-oom-swap 120 docker run --name gloton2 -m 64m debian:trixie-slim \
+            sh -c 'x=$(head -c 128M /dev/zero | tr "\0" a)'
+          nota "swap de la VM: $(awk '/^SwapTotal:/ { print $2 }' /proc/meminfo) kB"
+          if [ "$rc" -eq 137 ]; then bien "también muere con 137"
+          else aviso "con -m 64m solo, el contenedor que pide 128 MiB terminó con $rc: Docker le da otros 64 MiB de swap"; fi
+          docker rm -f gloton2 > /dev/null
           fin
       - name: Restaurar la restricción
         if: always()
@@ -1129,6 +1162,22 @@ jobs:
           corre ficha-suelto 20 sh ficha.sh "$suelto"
           linea "$(readlink -f "$suelto"): ningún paquete lo reclama"
           codigo 1
+
+          donde "Cap. 11, ficha.sh con un archivo que el paquete declara en /lib"
+          # En Ubuntu 24.04 todavía hay paquetes con archivos en /lib, que es un enlace a usr/lib.
+          # readlink -f lleva la ruta a /usr/lib y dpkg -S no la encuentra (Listado 11-1).
+          caso=""
+          for f in /lib/systemd/system/*.timer /lib/systemd/system/*.service; do
+            if dpkg -S "$f" > /dev/null 2>&1 && ! dpkg -S "$(readlink -f "$f")" > /dev/null 2>&1; then
+              caso=$f; break
+            fi
+          done
+          if [ -n "$caso" ]; then
+            corre ficha-lib 20 sh ficha.sh "$caso"
+            aviso "ficha.sh $caso: $(head -n 1 "$_log"); dpkg -S $caso: $(dpkg -S "$caso" | head -n 1)"
+          else
+            nota "no hay archivos de paquetes declarados solo en /lib"
+          fi
           fin
 
   cap11-debian:
@@ -1364,6 +1413,9 @@ jobs:
           EOF
           chmod +x "$RUNNER_TEMP/debian"
           "$RUNNER_TEMP/debian" systemctl --user is-system-running || true
+          echo "PULSO_INICIO=$(date +%s)" >> "$GITHUB_ENV"
+          "$RUNNER_TEMP/debian" systemd-run --user --unit=pulso --on-active=60s sh -c \
+            'echo "pulso de $(id -un)"'
       - name: Listado 1-2 en Debian 13
         if: ${{ !cancelled() }}
         run: |
@@ -1376,17 +1428,22 @@ jobs:
               -p MemorySwapMax=0 sh ejemplos/cap01/fuga.sh
             if grep -q '^oom_group_kill' "$_log"; then completas=$((completas + 1)); cp "$_log" "$RUNNER_TEMP/deb-completa.log"; fi
           done
-          nota "$completas de diez corridas completas con el comando del Listado 1-2"
+          if [ "$completas" -ge 5 ]; then
+            nota "$completas de diez corridas completas con el comando del Listado 1-2"
+          else
+            aviso "solo $completas de diez corridas completas con el comando del Listado 1-2; las demás terminaron con Terminated antes de leer memory.max"
+          fi
           if [ "$completas" -gt 0 ]; then
             usa_log "$RUNNER_TEMP/deb-completa.log"
-            linea "Killed"
-            linea "python terminó con: 137"
-            linea "52428800"
-            linea "oom 1"
-            linea "oom_kill 1"
           else
-            aviso "ninguna de las diez corridas llegó a leer memory.max"
+            corre deb-fuga-continue 60 "$debian" systemd-run --user --scope -q -p MemoryMax=50M \
+              -p MemorySwapMax=0 -p OOMPolicy=continue sh ejemplos/cap01/fuga.sh
           fi
+          linea "Killed"
+          linea "python terminó con: 137"
+          linea "52428800"
+          linea "oom 1"
+          linea "oom_kill 1"
           fin
       - name: Listado 3-11, Listado 6-5, reinicios y Listado 8-6 en Debian 13
         if: ${{ !cancelled() }}
@@ -1417,6 +1474,14 @@ jobs:
             done'
           linea "intento 4: 0"
           linea "intento 5: 1"
+
+          donde "Cap. 6, Probalo 1 en Debian 13"
+          "$debian" sh -c 'printf "#!/bin/sh\necho hola\n" > /tmp/sinpermiso.sh && chmod 644 /tmp/sinpermiso.sh'
+          corre deb-sinpermiso 20 "$debian" systemd-run --user --unit=sinpermiso /tmp/sinpermiso.sh
+          codigo 0
+          corre deb-sinpermiso-exec 20 "$debian" systemd-run --user --unit=sinpermiso2 -p Type=exec /tmp/sinpermiso.sh
+          if [ "$rc" -ne 0 ]; then bien "con Type=exec, systemd-run termina con $rc"
+          else falla "con Type=exec, systemd-run también terminó con 0"; fi
 
           donde "Cap. 8, Listado 8-6 en Debian 13"
           corre deb-seccomp 30 "$debian" systemd-run --user --wait --pipe -p SystemCallFilter=~uname uname -r
@@ -1456,4 +1521,17 @@ jobs:
             "$debian" grep -q '^    oom_group_kill' writeup-fuga.md && completas=$((completas + 1))
           done
           nota "$completas de diez completas sin OOMPolicy=continue, con la máquina tranquila"
+
+          donde "Cap. 6, Listado 6-8 en Debian 13"
+          unset DEBIAN_DIR
+          while [ $(($(date +%s) - PULSO_INICIO)) -lt 180 ]; do
+            if ! "$debian" systemctl --user status pulso.timer > /dev/null 2>&1 \
+              && "$debian" journalctl --user -u pulso.service --no-pager | grep -q 'pulso de'; then break; fi
+            sleep 2
+          done
+          nota "el timer se fue $(($(date +%s) - PULSO_INICIO)) s después de crearlo"
+          corre deb-pulso-status 10 "$debian" systemctl --user status pulso.timer
+          dice "Unit pulso.timer could not be found."
+          corre deb-pulso-journal 10 "$debian" journalctl --user -u pulso.timer -u pulso.service --no-pager
+          dice "pulso de lector"
           fin
