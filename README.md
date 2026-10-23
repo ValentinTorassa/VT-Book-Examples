@@ -7,6 +7,9 @@ acá solo se publican los archivos que acompañan los listados.
 La rama `main` sigue al libro mientras se prepara. Cada edición terminada tendrá una etiqueta de
 Git para que una copia impresa apunte a una versión fija. Todavía no hay una edición etiquetada.
 
+En cada cambio, [Revisar ejemplos](https://github.com/ValentinTorassa/VT-Book-Examples/actions/workflows/revisar-ejemplos.yml)
+comprueba la sintaxis de los scripts y que los JSON se puedan leer. No ejecuta los ejemplos.
+
 ## Antes de correrlos
 
 - Leé el capítulo y ejecutá los comandos en una máquina de laboratorio. Algunos ejemplos crean

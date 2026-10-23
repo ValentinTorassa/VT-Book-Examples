@@ -1,0 +1,49 @@
+name: Revisar ejemplos
+
+# Comprueba que los ejemplos que imprime el libro sigan siendo válidos. No ejecuta
+# ninguno: solo revisa la sintaxis de los scripts y los archivos de datos.
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: revisar-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  revisar:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Sintaxis de los scripts de shell
+        # Cada script se revisa con el intérprete de su shebang: #!/bin/sh es dash
+        # en Debian y Ubuntu, así que un bashismo en esos scripts también falla acá.
+        run: |
+          status=0
+          while IFS= read -r -d '' f; do
+            case "$(head -n 1 "$f")" in
+              *bash*) shell=bash ;;
+              *) shell=dash ;;
+            esac
+            if ! "$shell" -n "$f"; then
+              echo "::error file=$f::$shell -n no puede leer el script"
+              status=1
+            fi
+          done < <(git ls-files -z '*.sh')
+          exit "$status"
+      - name: shellcheck (solo errores)
+        # Las advertencias no cortan: los listados son cortos a propósito y están
+        # impresos tal cual en el libro.
+        run: git ls-files -z '*.sh' | xargs -0 shellcheck --severity=error
+      - name: Sintaxis de Python
+        run: git ls-files -z '*.py' | xargs -0 python3 -m py_compile
+      - name: JSON que se puedan leer
+        run: git ls-files -z '*.json' | xargs -0 -n 1 python3 -m json.tool > /dev/null
