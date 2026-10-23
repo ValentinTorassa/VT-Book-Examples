@@ -8,7 +8,14 @@ La rama `main` sigue al libro mientras se prepara. Cada edición terminada tendr
 Git para que una copia impresa apunte a una versión fija. Todavía no hay una edición etiquetada.
 
 En cada cambio, [Revisar ejemplos](https://github.com/ValentinTorassa/VT-Book-Examples/actions/workflows/revisar-ejemplos.yml)
-comprueba la sintaxis de los scripts y que los JSON se puedan leer. No ejecuta los ejemplos.
+comprueba la sintaxis de los scripts y que los JSON se puedan leer, y
+[Correr ejemplos](https://github.com/ValentinTorassa/VT-Book-Examples/actions/workflows/correr-ejemplos.yml)
+los ejecuta en una VM descartable con Ubuntu 24.04 y compara la salida con la que imprime el libro.
+Los listados con systemd y los del capítulo 11 se repiten en un contenedor de Debian 13, el
+sistema de las pruebas del libro. El resumen de cada corrida separa lo que coincide de lo que
+cambia en Ubuntu. No se ejecuta `ejemplos/cap08/compose.yaml`, que es para analizarlo y usa
+imágenes que no existen; se comprueba el `grep` del capítulo 8. Ningún ejemplo necesita una cuenta
+de la nube: los del capítulo 9 se evalúan con `evalua.py` y `jq`, como en el libro.
 
 ## Antes de correrlos
 

@@ -2,8 +2,9 @@ name: Correr ejemplos
 
 # Corre los ejemplos del libro en una VM descartable de GitHub (Ubuntu 24.04) y comprueba lo que
 # el libro dice que pasa: una línea de la salida, un código de salida, un archivo o un límite.
-# Hay un trabajo por capítulo; el capítulo 11 corre también en un contenedor de Debian 13, el
-# sistema de las pruebas del libro. Cada paso deja sus comprobaciones en el resumen de la corrida:
+# Hay un trabajo por capítulo. El capítulo 11 y los listados con systemd-run (capítulos 1, 3, 6, 8
+# y 12) corren también en Debian 13, el sistema de las pruebas del libro, que trae systemd 257;
+# Ubuntu 24.04 trae el 255. Cada paso deja sus comprobaciones en el resumen de la corrida:
 #   ✅ coincide con el libro   ❌ no coincide   ⚠️ difiere por el entorno (Ubuntu, la red, una
 #   versión nueva)   ℹ️ dato para comparar
 #
