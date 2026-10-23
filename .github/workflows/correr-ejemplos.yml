@@ -50,24 +50,35 @@ jobs:
         with:
           persist-credentials: false
       - name: Sesión de usuario con systemd
+        if: ${{ !cancelled() }}
         run: .github/ayudas/sesion-de-usuario.sh
       - name: Listados 1-2 a 1-4
+        if: ${{ !cancelled() }}
         working-directory: ejemplos/cap01
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 1, Listado 1-2"
-          # La advertencia del Listado 1-2: alguna corrida puede cortarse con Terminated. Se
-          # repite hasta cinco veces y se anota cuántas se cortaron antes de una completa.
+          # La advertencia del Listado 1-2: alguna corrida puede cortarse con Terminated, antes
+          # de leer el cgroup. Se repite hasta cinco veces y se anota cuántas se cortaron.
           cortadas=0
-          for intento in 1 2 3 4 5; do
+          for _ in 1 2 3 4 5; do
             corre fuga-50m 60 systemd-run --user --scope -q -p MemoryMax=50M \
               -p MemorySwapMax=0 sh fuga.sh
             if grep -q '^oom_group_kill' "$_log"; then break; fi
             cortadas=$((cortadas + 1))
           done
-          nota "corridas cortadas antes de una completa: $cortadas"
           linea "Killed"
           linea "python terminó con: 137"
+          if [ "$cortadas" -lt 5 ]; then
+            nota "corridas cortadas antes de una completa: $cortadas"
+          else
+            aviso "las cinco corridas se cortaron con Terminated (código 143) antes de leer memory.max; el capítulo dice que en Ubuntu 24.04 el resultado es el mismo"
+            # La solución del capítulo 12: OOMPolicy=continue.
+            corre fuga-50m-continue 60 systemd-run --user --scope -q -p MemoryMax=50M \
+              -p MemorySwapMax=0 -p OOMPolicy=continue sh fuga.sh
+            linea "Killed"
+            linea "python terminó con: 137"
+          fi
           linea "52428800"
           linea "oom 1"
           linea "oom_kill 1"
@@ -83,6 +94,7 @@ jobs:
           dice "Failed with result 'oom-kill'."
           fin
       - name: Probalo 1 y 2
+        if: ${{ !cancelled() }}
         working-directory: ejemplos/cap01
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
@@ -120,10 +132,12 @@ jobs:
         with:
           persist-credentials: false
       - name: Instalar strace y gcc
+        if: ${{ !cancelled() }}
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq strace gcc > /dev/null
       - name: Listados 2-2 a 2-4 y oculta.c
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           # El directorio de prueba del libro: fotos/, hola.txt y notas.md. script(1) le da a
@@ -174,6 +188,7 @@ jobs:
           codigo 1
           fin
       - name: Listado 2-6 (linterna.sh)
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 2, Listado 2-6"
@@ -187,6 +202,7 @@ jobs:
             /bin/backup-diario /usr/local/games/backup-diario /usr/games/backup-diario
           fin
       - name: Probalo 1 y 2
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 2, Probalo 1 (fork y exec)"
@@ -216,8 +232,10 @@ jobs:
         with:
           persist-credentials: false
       - name: Sesión de usuario con systemd
+        if: ${{ !cancelled() }}
         run: .github/ayudas/sesion-de-usuario.sh
       - name: Listados 3-5 a 3-8
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           segundos() { local h m s; IFS=: read -r h m s <<< "$1"; echo $((10#$h * 3600 + 10#$m * 60 + 10#$s)); }
@@ -253,6 +271,7 @@ jobs:
           dice_re '^Threads:[[:space:]]+4$'
           fin
       - name: Listado 3-11 (systemd-run)
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 3, Listado 3-11"
@@ -275,6 +294,7 @@ jobs:
         with:
           persist-credentials: false
       - name: uidmap y rangos de UID (nota del Listado 4-6)
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 4, nota de uidmap"
@@ -291,6 +311,7 @@ jobs:
           fi
           fin
       - name: Con la restricción de AppArmor de Ubuntu 24.04
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 4, nota sobre Ubuntu 24.04, con la restricción puesta"
@@ -301,8 +322,10 @@ jobs:
           corre restringido-r 30 unshare --user --map-root-user id
           nota "unshare -r id: código $rc; $(head -n 1 "$_log")"
       - name: Bajar la restricción (solo en esta VM)
+        if: ${{ !cancelled() }}
         run: .github/ayudas/apparmor.sh bajar
       - name: Listado 4-7
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 4, Listado 4-7"
@@ -318,6 +341,7 @@ jobs:
           linea "solo para 2001"
           fin
       - name: Listados 4-8 y 4-9, Probalo 3
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 4, Listado 4-8"
@@ -370,6 +394,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Con la restricción de AppArmor de Ubuntu 24.04
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 5, Listado 5-6 con la restricción puesta"
@@ -378,8 +403,10 @@ jobs:
           corre restringido 30 unshare --user --map-root-user --mount sh sin-inodos.sh
           nota "código $rc; primera línea: $(head -n 1 "$_log")"
       - name: Bajar la restricción (solo en esta VM)
+        if: ${{ !cancelled() }}
         run: .github/ayudas/apparmor.sh bajar
       - name: Listado 5-6 y Probalo 1
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 5, Listado 5-6"
@@ -418,8 +445,10 @@ jobs:
         with:
           persist-credentials: false
       - name: Sesión de usuario con systemd
+        if: ${{ !cancelled() }}
         run: .github/ayudas/sesion-de-usuario.sh
       - name: Listado 6-7 (un timer transitorio)
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 6, Listado 6-7"
@@ -435,6 +464,7 @@ jobs:
           linea "pulso.timer"
           fin
       - name: Listados 6-5 y 6-6, y los reinicios
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           cp "$GITHUB_WORKSPACE/ejemplos/cap06/app.sh" /tmp/app.sh
@@ -446,7 +476,9 @@ jobs:
           dice "Running as unit: miservicio.service"
           sleep 1
           corre status 10 systemctl --user status miservicio
-          dice "miservicio.service - [systemd-run] /usr/bin/sh /tmp/app.sh"
+          dice_re '^× miservicio\.service - (\[systemd-run\] )?/usr/bin/sh /tmp/app\.sh$'
+          # systemd 257 (Debian 13) agrega «[systemd-run]» a la descripción; el 255 de Ubuntu, no.
+          dice_o_avisa "miservicio.service - [systemd-run] /usr/bin/sh /tmp/app.sh"
           dice "Active: failed (Result: exit-code)"
           dice "(code=exited, status=1/FAILURE)"
           dice "app: no puedo leer /tmp/app.conf"
@@ -474,6 +506,7 @@ jobs:
           dice "Start request repeated too quickly."
           fin
       - name: Probalo 1 y 2
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 6, Probalo 1 (script sin x, simple y exec)"
@@ -496,6 +529,7 @@ jobs:
           no_dice "<3>"
           fin
       - name: Listados 6-3 y 6-10 (sin-paquete.sh), Probalo 3
+        if: ${{ !cancelled() }}
         working-directory: ejemplos/cap06
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
@@ -525,6 +559,7 @@ jobs:
           nota "$(wc -l < "$_log") units; SIN PAQUETE: $(grep '^SIN PAQUETE' "$_log" | cut -c 14- | tr '\n' ' ')"
           fin
       - name: Listado 6-8 (lo que queda del timer)
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 6, Listado 6-8"
@@ -551,10 +586,12 @@ jobs:
         with:
           persist-credentials: false
       - name: Instalar dig, nft, ping y curl (nota del capítulo)
+        if: ${{ !cancelled() }}
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq bind9-dnsutils nftables iproute2 iputils-ping curl > /dev/null
       - name: Con la restricción de AppArmor de Ubuntu 24.04
+        if: ${{ !cancelled() }}
         working-directory: ejemplos/cap07
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
@@ -569,8 +606,10 @@ jobs:
           nota "hosts en nsswitch.conf: $(grep '^hosts:' /etc/nsswitch.conf | tr -s ' ')"
           if lsmod | grep -q '^br_netfilter'; then nota "br_netfilter cargado"; else nota "br_netfilter no está cargado"; fi
       - name: Bajar la restricción (solo en esta VM)
+        if: ${{ !cancelled() }}
         run: .github/ayudas/apparmor.sh bajar
       - name: Listados 7-3, 7-5 y 7-9
+        if: ${{ !cancelled() }}
         working-directory: ejemplos/cap07
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
@@ -609,6 +648,7 @@ jobs:
           dice_re 'tcp dport 8080 counter packets 1 bytes 60 dnat to 10\.88\.0\.2:80$'
           fin
       - name: Probalo 1 y 2
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 7, Probalo 1 (el servidor de c1 en 127.0.0.1)"
@@ -642,6 +682,7 @@ jobs:
           nota "$(grep '^c1 -> c2' "$_log")"
           fin
       - name: Listados 7-1, 7-6 a 7-8 (contra example.com)
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 7, Listado 7-1"
@@ -663,6 +704,7 @@ jobs:
           nota "$(tr '\n' ';' < "$_log")"
           fin
       - name: Listado 7-10 (Docker)
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 7, Listado 7-10"
@@ -688,8 +730,10 @@ jobs:
         with:
           persist-credentials: false
       - name: Sesión de usuario con systemd
+        if: ${{ !cancelled() }}
         run: .github/ayudas/sesion-de-usuario.sh
       - name: Con la restricción de AppArmor de Ubuntu 24.04
+        if: ${{ !cancelled() }}
         working-directory: ejemplos/cap08
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
@@ -702,8 +746,10 @@ jobs:
           corre r-capas 30 sh capas.sh
           nota "capas.sh: código $rc; $(head -n 1 "$_log")"
       - name: Bajar la restricción (solo en esta VM)
+        if: ${{ !cancelled() }}
         run: .github/ayudas/apparmor.sh bajar
       - name: Listados 8-1 y 8-2, Probalo 1
+        if: ${{ !cancelled() }}
         working-directory: ejemplos/cap08
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
@@ -737,6 +783,7 @@ jobs:
           nota "$(head -n 2 "$_log" | tr '\n' ';') interfaces: $(grep -cE ' (UP|DOWN|UNKNOWN) ' "$_log" || true)"
           fin
       - name: adentro.sh, procesos.sh (Probalo 2) y el Listado 8-6
+        if: ${{ !cancelled() }}
         working-directory: ejemplos/cap08
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
@@ -755,11 +802,17 @@ jobs:
 
           donde "Cap. 8, Listado 8-6"
           corre seccomp-kill 30 systemd-run --user --wait --pipe -p SystemCallFilter=~uname uname -r
-          dice "Finished with result: signal"
-          dice "Main processes terminated with: code=killed, status=31/SYS"
+          # El proceso muere por SIGSYS. Si la VM guarda volcados de memoria, systemd lo informa
+          # como core-dump en vez de signal; la causa es la misma.
+          dice_re '^Finished with result: (signal|core-dump)$'
+          dice_re '^Main processes terminated with: code=(killed, status=31|dumped/status=SYS|dumped, status=31)'
+          dice_o_avisa "Finished with result: signal"
+          dice_o_avisa "Main processes terminated with: code=killed, status=31/SYS"
           corre seccomp-eperm 30 systemd-run --user --wait --pipe -q -p SystemCallFilter=~uname \
             -p SystemCallErrorNumber=EPERM uname -r
-          linea "uname: cannot get system name: Operation not permitted"
+          dice_re '^(/usr/bin/)?uname: cannot get system name: Operation not permitted$'
+          # systemd 255 le pasa a uname la ruta entera como argv[0]; el 257, el nombre.
+          linea_o_avisa "uname: cannot get system name: Operation not permitted"
 
           donde "Cap. 8, Listado 8-5"
           corre grep-puertas 10 grep -rn -e docker.sock -e privileged .
@@ -769,6 +822,7 @@ jobs:
           else falla "el grep encontró $(wc -l < "$_log") líneas"; fi
           fin
       - name: Listado 8-4 (capas.sh) y Probalo 3
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 8, Listado 8-4"
@@ -798,6 +852,7 @@ jobs:
           unshare -r rm -rf imagen cambios trabajo raiz
           fin
       - name: Docker con -m 64m (capítulos 1 y 8)
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 8, docker run -m 64m"
@@ -824,6 +879,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Listados 9-2 a 9-4 y Probalo 1
+        if: ${{ !cancelled() }}
         working-directory: ejemplos/cap09
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
@@ -890,10 +946,12 @@ jobs:
           path: VT-Agent-Firewall
           persist-credentials: false
       - name: Instalar strace y jq
+        if: ${{ !cancelled() }}
         run: |
           sudo apt-get update -qq
           sudo apt-get install -y -qq strace jq > /dev/null
       - name: Listados 10-1 y 10-2 (agente.py)
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           cd "$(mktemp -d)"
@@ -916,6 +974,7 @@ jobs:
           linea "salida: 1 cat: informe.txt: Permission denied"
           fin
       - name: puente.py y su Probalo 2
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           cd "$(mktemp -d)"
@@ -939,6 +998,7 @@ jobs:
           codigo 1
           fin
       - name: Listados 10-3 y 10-4 (VT-Agent-Firewall)
+        if: ${{ !cancelled() }}
         working-directory: VT-Agent-Firewall
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
@@ -985,6 +1045,7 @@ jobs:
           dice_re '\.env'
           fin
       - name: Nota del Listado 10-6 (sin resolve en nsswitch.conf)
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           .github/ayudas/apparmor.sh bajar
@@ -1004,6 +1065,7 @@ jobs:
           if grep -q '^hosts:.*resolve' /etc/nsswitch.conf; then codigo 0; else codigo 2; fi
           fin
       - name: Listado 10-6 con libnss-resolve, y Probalo 3
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           sudo apt-get install -y -qq libnss-resolve > /dev/null
@@ -1037,6 +1099,7 @@ jobs:
         with:
           persist-credentials: false
       - name: ficha.sh en Ubuntu 24.04
+        if: ${{ !cancelled() }}
         working-directory: ejemplos/cap11
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
@@ -1075,6 +1138,7 @@ jobs:
     timeout-minutes: 15
     steps:
       - name: Preparar Debian 13 con deb-src y un usuario común
+        if: ${{ !cancelled() }}
         run: |
           sed -i 's/^Types: deb$/Types: deb deb-src/' /etc/apt/sources.list.d/debian.sources
           apt-get update -qq
@@ -1084,6 +1148,7 @@ jobs:
         with:
           persist-credentials: false
       - name: Listados 11-1, 11-3 y 11-4, Probalo 1
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           cp ejemplos/cap11/ficha.sh /home/lector/
@@ -1128,6 +1193,7 @@ jobs:
           linea "fuente:  rust-fd-find"
           fin
       - name: Listados 11-5 a 11-7 (sin root)
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 11, Listado 11-5"
@@ -1169,8 +1235,10 @@ jobs:
         with:
           persist-credentials: false
       - name: Sesión de usuario con systemd
+        if: ${{ !cancelled() }}
         run: .github/ayudas/sesion-de-usuario.sh
       - name: Listado 12-1 (writeup.sh)
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 12, Listado 12-1"
@@ -1201,6 +1269,7 @@ jobs:
           else falla "$completas de seis completas"; fi
           fin
       - name: Probalo 2 (sin OOMPolicy=continue, con la máquina ocupada)
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 12, Probalo 2"
@@ -1218,6 +1287,7 @@ jobs:
           nota "$completas de diez corridas completas sin OOMPolicy=continue (el libro: dos de seis)"
           fin
       - name: Listado 12-3 (prueba-restore.sh) y Probalo 3
+        if: ${{ !cancelled() }}
         run: |
           . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
           donde "Cap. 12, Listado 12-3"
@@ -1249,4 +1319,141 @@ jobs:
           corre restore-nuevo 30 sh prueba-restore.sh backup-nuevo.tar.gz manifiesto.sha256
           linea "./datos/clientes.csv: FAILED"
           codigo 1
+          fin
+
+  debian-systemd:
+    name: "Caps. 1, 3, 6, 8 y 12: systemd 257 en Debian 13"
+    # Los listados con systemd-run se corrieron en Debian 13 (systemd 257); Ubuntu 24.04 trae
+    # systemd 255. Este trabajo arranca Debian 13 con systemd como PID 1 en un contenedor y
+    # repite ahí los listados que cambian con la versión. El kernel es el de la VM.
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - name: Debian 13 con systemd y un usuario con su sesión
+        run: |
+          docker build -q -t debian-systemd - <<'EOF'
+          FROM debian:trixie
+          RUN apt-get update -qq \
+           && apt-get install -y -qq --no-install-recommends systemd systemd-sysv dbus \
+              dbus-user-session python3 procps \
+           && useradd -m -s /bin/bash lector && mkdir -p /var/log/journal
+          STOPSIGNAL SIGRTMIN+3
+          CMD ["/sbin/init"]
+          EOF
+          docker run -d --name debian --privileged --cgroupns=private --tmpfs /run \
+            --tmpfs /run/lock debian-systemd
+          for _ in $(seq 60); do
+            s=$(docker exec debian systemctl is-system-running 2> /dev/null || true)
+            case $s in running | degraded) break ;; esac
+            sleep 1
+          done
+          echo "systemd: $s"
+          docker exec debian systemctl start user@1000.service
+          docker exec debian systemctl --version | head -n 1
+          docker cp ejemplos debian:/home/lector/ejemplos
+          docker exec debian chown -R lector: /home/lector/ejemplos
+          cat > "$RUNNER_TEMP/debian" <<'EOF'
+          #!/bin/sh
+          # debian CMD...: corre CMD como lector, con su gestor de systemd, en el contenedor.
+          exec docker exec -i -w "${DEBIAN_DIR:-/home/lector}" debian runuser -u lector -- \
+            env XDG_RUNTIME_DIR=/run/user/1000 \
+            DBUS_SESSION_BUS_ADDRESS=unix:path=/run/user/1000/bus LANG=C.UTF-8 "$@"
+          EOF
+          chmod +x "$RUNNER_TEMP/debian"
+          "$RUNNER_TEMP/debian" systemctl --user is-system-running || true
+      - name: Listado 1-2 en Debian 13
+        if: ${{ !cancelled() }}
+        run: |
+          . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
+          debian=$RUNNER_TEMP/debian
+          donde "Cap. 1, Listado 1-2 en Debian 13"
+          completas=0
+          for _ in 1 2 3 4 5 6 7 8 9 10; do
+            corre deb-fuga 60 "$debian" systemd-run --user --scope -q -p MemoryMax=50M \
+              -p MemorySwapMax=0 sh ejemplos/cap01/fuga.sh
+            if grep -q '^oom_group_kill' "$_log"; then completas=$((completas + 1)); cp "$_log" "$RUNNER_TEMP/deb-completa.log"; fi
+          done
+          nota "$completas de diez corridas completas con el comando del Listado 1-2"
+          if [ "$completas" -gt 0 ]; then
+            usa_log "$RUNNER_TEMP/deb-completa.log"
+            linea "Killed"
+            linea "python terminó con: 137"
+            linea "52428800"
+            linea "oom 1"
+            linea "oom_kill 1"
+          else
+            aviso "ninguna de las diez corridas llegó a leer memory.max"
+          fi
+          fin
+      - name: Listado 3-11, Listado 6-5, reinicios y Listado 8-6 en Debian 13
+        if: ${{ !cancelled() }}
+        run: |
+          . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
+          debian=$RUNNER_TEMP/debian
+
+          donde "Cap. 3, Listado 3-11 en Debian 13"
+          corre deb-espera 30 "$debian" bash -c 'systemd-run --user --unit=espera sleep 120
+            pid=$(systemctl --user show -p MainPID --value espera)
+            ps -o pid,cmd -p "$(ps -o ppid= -p "$pid" | tr -d " ")"
+            systemctl --user stop espera'
+          dice_re '^ *[0-9]+ /usr/lib/systemd/systemd --user$'
+
+          donde "Cap. 6, Listado 6-5 en Debian 13"
+          "$debian" cp ejemplos/cap06/app.sh /tmp/app.sh
+          corre deb-miservicio 20 "$debian" systemd-run --user --unit=miservicio sh /tmp/app.sh
+          codigo 0
+          sleep 1
+          corre deb-status 10 "$debian" systemctl --user status miservicio
+          dice "miservicio.service - [systemd-run] /usr/bin/sh /tmp/app.sh"
+          dice "Active: failed (Result: exit-code)"
+          dice "app: no puedo leer /tmp/app.conf"
+
+          donde "Cap. 6, «Reiniciar no es gratis» en Debian 13"
+          corre deb-reinicios 60 "$debian" bash -c 'for i in 1 2 3 4 5 6; do
+              systemctl --user restart miservicio; echo "intento $i: $?"
+            done'
+          linea "intento 4: 0"
+          linea "intento 5: 1"
+
+          donde "Cap. 8, Listado 8-6 en Debian 13"
+          corre deb-seccomp 30 "$debian" systemd-run --user --wait --pipe -p SystemCallFilter=~uname uname -r
+          dice "Finished with result: signal"
+          dice "Main processes terminated with: code=killed, status=31/SYS"
+          corre deb-eperm 30 "$debian" systemd-run --user --wait --pipe -q -p SystemCallFilter=~uname \
+            -p SystemCallErrorNumber=EPERM uname -r
+          linea "uname: cannot get system name: Operation not permitted"
+          fin
+      - name: Capítulo 12 en Debian 13 (writeup.sh y Probalo 2)
+        if: ${{ !cancelled() }}
+        run: |
+          . "$GITHUB_WORKSPACE/.github/ayudas/comprobar.sh"
+          debian=$RUNNER_TEMP/debian
+          "$debian" sh -c 'mkdir -p w && cp ejemplos/cap12/writeup.sh ejemplos/cap01/fuga.sh w/'
+          export DEBIAN_DIR=/home/lector/w
+
+          donde "Cap. 12, Listado 12-1 en Debian 13"
+          completas=0
+          for _ in 1 2 3 4 5 6; do
+            "$debian" sh writeup.sh || true
+            "$debian" grep -q '^    oom_group_kill' writeup-fuga.md && completas=$((completas + 1))
+          done
+          if [ "$completas" -eq 6 ]; then bien "seis de seis completas con OOMPolicy=continue"
+          else falla "$completas de seis completas con OOMPolicy=continue"; fi
+          corre deb-writeup 10 "$debian" cat writeup-fuga.md
+          dice_re '^- Debian GNU/Linux 13 \(trixie\), kernel '
+          dice_re '^- systemd 257 \('
+          dice "- fuga.sh, sha256 d2c95959c865f1fe,"
+          linea "    python terminó con: 137"
+
+          donde "Cap. 12, Probalo 2 en Debian 13 (sin OOMPolicy=continue)"
+          "$debian" sh -c "sed 's/ *-p OOMPolicy=continue//' writeup.sh > writeup-sin.sh"
+          completas=0
+          for _ in 1 2 3 4 5 6 7 8 9 10; do
+            "$debian" sh writeup-sin.sh || true
+            "$debian" grep -q '^    oom_group_kill' writeup-fuga.md && completas=$((completas + 1))
+          done
+          nota "$completas de diez completas sin OOMPolicy=continue, con la máquina tranquila"
           fin
