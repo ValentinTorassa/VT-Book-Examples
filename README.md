@@ -4,8 +4,12 @@ Código y archivos de ejemplo del libro de Valentín Torassa sobre Linux y ciber
 carpeta `ejemplos/capNN/` corresponde a un capítulo. El repositorio del manuscrito es privado;
 acá solo se publican los archivos que acompañan los listados.
 
-La rama `main` sigue al libro mientras se prepara. Cada edición terminada tendrá una etiqueta de
-Git para que una copia impresa apunte a una versión fija. Todavía no hay una edición etiquetada.
+La rama `main` sigue al libro. Cada edición impresa tiene una etiqueta de Git con los ejemplos tal
+como salen en el papel. La primera edición (ISBN 978-631-01-9288-8) es `primera-edicion`:
+
+```bash
+git clone --branch primera-edicion https://github.com/ValentinTorassa/VT-Book-Examples.git
+```
 
 En cada cambio, [Revisar ejemplos](https://github.com/ValentinTorassa/VT-Book-Examples/actions/workflows/revisar-ejemplos.yml)
 comprueba la sintaxis de los scripts y que los JSON se puedan leer, y
