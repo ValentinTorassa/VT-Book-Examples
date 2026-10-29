@@ -4,6 +4,10 @@ Código y archivos de ejemplo del libro de Valentín Torassa sobre Linux y ciber
 carpeta `ejemplos/capNN/` corresponde a un capítulo. El repositorio del manuscrito es privado;
 acá solo se publican los archivos que acompañan los listados.
 
+Podés leer el [primer capítulo completo, «Toda abstracción filtra»](https://valentorassa.com/libro?ref=muestra-ejemplos),
+gratis y sin registro. La muestra tiene 15 páginas, con la explicación y los dibujos que
+acompañan a `ejemplos/cap01/fuga.sh`. El libro sigue en preparación.
+
 La rama `main` sigue al libro. Cada edición impresa tiene una etiqueta de Git con los ejemplos tal
 como salen en el papel. La primera edición (ISBN 978-631-01-9288-8) es `primera-edicion`:
 
